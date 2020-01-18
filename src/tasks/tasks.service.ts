@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from './tasks.entity';
 import { TaskStatus } from './task-status.enum';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
+import { User } from '../auth/user.entity';
 
 
 
@@ -12,26 +13,26 @@ import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
 export class TasksService {
     constructor(
         @InjectRepository(TaskRepository)
-        private taskRepository: TaskRepository
+        private taskRepository: TaskRepository,
     ) {
 
     }
 
-    async createTask(createTaskDTO: CreateTaskDTO): Promise<Task> {
-        return this.taskRepository.createTask(createTaskDTO)
+    async createTask(createTaskDTO: CreateTaskDTO, user: User): Promise<Task> {
+        return this.taskRepository.createTask(createTaskDTO, user)
     }
 
 
 
-    async getTasks(filterData: GetTasksFilterDto): Promise<Task[]> {
-        return await this.taskRepository.getTasks(filterData)
+    async getTasks(filterData: GetTasksFilterDto, user: User): Promise<Task[]> {
+        return await this.taskRepository.getTasks(filterData, user)
     }
 
 
 
 
-    async getTaskById(id: number): Promise<Task> {
-        const found = await this.taskRepository.findOne(id)
+    async getTaskById(id: number, user: User): Promise<Task> {
+        const found = await this.taskRepository.findOne({ where: { userId: user.id, id } })
         if (!found) {
             throw new NotFoundException(`Task with id : ${id} not found`)
         }
@@ -40,14 +41,14 @@ export class TasksService {
 
 
 
-    async deleteTaskById(id: number): Promise<void> {
-        let result = await this.taskRepository.delete(id)
+    async deleteTaskById(id: number, user: User): Promise<void> {
+        let result = await this.taskRepository.delete({ id, userId: user.id })
         if (result.affected === 0) {
             throw new NotFoundException(`Task with id : ${id} not found`)
         }
     }
-    async updateTaskStatus(id: number, status: TaskStatus): Promise<Task> {
-        let task = await this.getTaskById(id)
+    async updateTaskStatus(id: number, status: TaskStatus, user: User): Promise<Task> {
+        let task = await this.getTaskById(id, user)
         task.status = status
         return await task.save()
     }
